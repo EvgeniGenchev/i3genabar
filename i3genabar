@@ -1,0 +1,137 @@
+#!/bin/sh
+# @author Evgeni Genchev
+# @date 2022-12-19 11:09
+
+##################################### BLOCKS ###############################################
+layout(){
+	LG=$(xset -q | grep LED | awk '{print $10}')
+	
+	case "$LG" in 
+		"00000000" ) dat="{ \"full_text\": \"us\", \"color\":\"#8EC07C\" }" ;;
+		"00000001" ) dat="{ \"full_text\": \"US\", \"color\":\"#98971a\" }" ;;
+		"00001000" ) dat="{ \"full_text\": \"бг\", \"color\":\"#076678\" }" ;;
+		"00001001" ) dat="{ \"full_text\": \"БГ\", \"color\":\"#458588\" }" ;;
+		*) dat="{ \"full_text\": \"??\", \"color\":\"#928374\" }" ;;
+	esac
+
+	echo -n $dat
+}
+
+private_ip(){
+	PRIVATE_IP=$(ip a | grep "192.168" | awk '/inet/ {print $2}' | cut -f1 -d"/")
+	
+	echo -n ',{'
+	echo -n "\"name\":\"id_local_ip\","
+	echo -n "\"full_text\":\"$PRIVATE_IP\","
+	echo -n "\"color\": \"#8EC07C\""
+	echo -n "}"
+
+}
+
+disk_usage(){
+	DISK_INFO=$(df -h /home | tail -n1 | tr -s " ")
+	TOTAL=$(echo $DISK_INFO | cut -d " " -f 2)
+	USED=$(echo $DISK_INFO | cut -d " " -f 3)
+	FREE=$(echo $DISK_INFO | cut -d " " -f 4)
+	PRCT_USED=$(echo $DISK_INFO | cut -d " " -f 5)
+
+	echo -n ',{'
+	echo -n "\"name\":\"id_disk\","
+	echo -n "\"full_text\":\" $USED/$TOTAL\""
+	echo -n "}"
+}
+
+volume_pamixer() {
+	VOL=$(pamixer --get-volume)
+	IS_MUTE=$(pamixer --get-mute)
+	echo -n ',{'
+	echo -n "\"name\":\"id_vol\","
+
+	if [[ $IS_MUTE == "true" ]]; then
+
+		echo -n "\"color\": \"#FABD2F\","
+		echo -n "\"full_text\":\"♪ muted ($VOL%)\","
+	else
+		echo -n "\"full_text\":\"♪ $VOL%\","
+	fi
+		echo -n "\"instance\":\"default.Master.0\","
+		echo -n "\"markup\":\"none\""
+	echo -n "}"
+}
+
+dtime() {
+	DATE=$(date "+%Y-%m-%d %H:%M")
+	echo -n ',{'
+	echo -n "\"name\":\"id_dtime\","
+	echo -n "\"full_text\":\" $DATE \""
+	echo -n "}"
+}
+
+################################# END BLOCKS ###############################################
+
+
+################################## ACTIONS #################################################
+calendar_action(){
+	TODAY=$(date '+%-d')
+	HEAD=$(cal | head -n1)
+	BODY=$(cal | tail -n7 | sed -z "s|$TODAY|<u><b>$TODAY</b></u>|1")
+	FOOT="\n\t<i>~calendar</i> "
+
+	dunstify "$HEAD" "$BODY$FOOT"
+}
+
+volume_pamixer_action(){
+	IS_MUTE=$(pamixer --get-mute)
+	if [[ $IS_MUTE == "true" ]]; then
+		pamixer --unmute
+	else
+		pamixer --mute 
+	fi
+
+}
+
+disk_action(){
+	
+	DISK_INFO=$(df -h /home | tail -n1 | tr -s " ")
+	TOTAL=$(echo $DISK_INFO | cut -d " " -f 2)
+	USED=$(echo $DISK_INFO | cut -d " " -f 3)
+	FREE=$(echo $DISK_INFO | cut -d " " -f 4)
+	PRCT_USED=$(echo $DISK_INFO | cut -d " " -f 5)
+
+	MSG="TOTAL:\t$TOTAL\nUSED:\t$USED\nUSED%:\t$PRCT_USED\nFREE:\t$FREE"
+
+	dunstify " Disk Info" "$MSG"
+}
+################################# END ACTIONS ##############################################
+
+echo '{"version":1, "click_events": true}'
+echo '['
+echo '[]'
+
+(while :;
+do
+	echo -n ",["
+	layout
+	volume_pamixer
+	private_ip
+	disk_usage
+	dtime
+	echo -n "]"
+	echo
+		sleep 0.5
+done) &
+
+while read line;
+do
+	if [[ $line == *"name"*"id_dtime"* ]]; then
+		calendar_action &
+
+	elif [[ $line == *"name"*"id_vol"* ]]; then
+		volume_pamixer_action &
+	
+	elif [[ $line == *"name"*"id_disk"* ]]; then
+		disk_action &
+	
+	fi
+
+done
