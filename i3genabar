@@ -2,6 +2,11 @@
 # @author Evgeni Genchev
 # @date 2022-12-19 11:09
 
+
+COLOR_GOOD="#8EC07C"
+COLOR_OK="#FABD2F"
+COLOR_BAD="#9D0025"
+
 ##################################### BLOCKS ###############################################
 layout(){
 	LG=$(xset -q | grep LED | awk '{print $10}')
@@ -18,14 +23,56 @@ layout(){
 }
 
 private_ip(){
+
+	INTERNET_MODULE="wlan0"
 	PRIVATE_IP=$(ip a | grep "192.168" | awk '/inet/ {print $2}' | cut -f1 -d"/")
+	SIGNAL_STRENGTH=$(cat /proc/net/wireless | grep 'wlan0' | tr -s " " | cut -d " " -f 4 | cut -f1 -d".")
 	
 	echo -n ',{'
 	echo -n "\"name\":\"id_local_ip\","
 	echo -n "\"full_text\":\"$PRIVATE_IP\","
-	echo -n "\"color\": \"#8EC07C\""
+	
+	if [ -n $SIGNAL_STRENGTH ]; then
+		if [ $SIGNAL_STRENGTH -gt 39 ]; then
+			echo -n "\"color\": \"$COLOR_GOOD\""
+		elif [ $SIGNAL_STRENGTH -gt 19 ]; then		
+			echo -n "\"color\": \"$COLOR_OK\""
+		else
+			echo -n "\"color\": \"$COLOR_BAD\""
+		fi
+	else
+		echo -n "\"color\": \"$COLOR_GOOD\""
+	fi
+	
 	echo -n "}"
 
+}
+
+battery(){
+
+	BAT="BAT1" #check your own battery
+
+	if [ -f /sys/class/power_supply/$BAT/uevent ]; then
+		CAPACITY=$(cat /sys/class/power_supply/$BAT/uevent | grep "CAPACITY=" | cut -d'=' -f2)
+		
+		SUPPLY_STATUS=$(cat /sys/class/power_supply/$BAT/uevent | grep "STATUS=" | cut -d'=' -f2)
+		echo -n ',{'
+		echo -n "\"name\":\"id_battery\","
+		
+		if [ $SUPPLY_STATUS == "Charging" ]; then
+			echo -n "\"full_text\":\" $CAPACITY%\","
+			echo -n "\"color\": \"$COLOR_OK\""
+		
+		elif [ $CAPACITY -lt 21 ]; then
+			echo -n "\"full_text\":\" $CAPACITY%\","
+			echo -n "\"color\": \"$COLOR_BAD\""
+		
+		else
+			echo -n "\"full_text\":\" $CAPACITY%\""
+		fi
+
+		echo -n "}"
+	fi
 }
 
 disk_usage(){
@@ -49,7 +96,7 @@ volume_pamixer() {
 
 	if [[ $IS_MUTE == "true" ]]; then
 
-		echo -n "\"color\": \"#FABD2F\","
+		echo -n "\"color\": \"$COLOR_OK\","
 		echo -n "\"full_text\":\"♪ muted ($VOL%)\","
 	else
 		echo -n "\"full_text\":\"♪ $VOL%\","
@@ -114,6 +161,7 @@ do
 	layout
 	volume_pamixer
 	private_ip
+	battery
 	disk_usage
 	dtime
 	echo -n "]"
