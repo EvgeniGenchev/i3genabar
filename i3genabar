@@ -6,6 +6,7 @@
 COLOR_GOOD="#8EC07C"
 COLOR_OK="#FABD2F"
 COLOR_BAD="#9D0025"
+COLOR_PKG="#b380c2"
 
 ##################################### BLOCKS ###############################################
 layout(){
@@ -63,6 +64,10 @@ battery(){
 			echo -n "\"full_text\":\" $CAPACITY%\","
 			echo -n "\"color\": \"$COLOR_OK\""
 		
+		elif [ $CAPACITY -eq 100 ]; then
+			echo -n "\"full_text\":\" $CAPACITY%\","
+			echo -n "\"color\": \"$COLOR_BAD\""
+		
 		elif [ $CAPACITY -lt 21 ]; then
 			echo -n "\"full_text\":\" $CAPACITY%\","
 			echo -n "\"color\": \"$COLOR_BAD\""
@@ -114,6 +119,15 @@ dtime() {
 	echo -n "}"
 }
 
+pkg() {
+	N_PKG=$(pacman -Qq | wc -l)
+	echo -n ',{'
+	echo -n "\"name\":\"id_pkg\","
+	echo -n "\"color\": \"$COLOR_PKG\","
+	echo -n "\"full_text\":\"  $N_PKG \""
+	echo -n "}"
+}
+
 ################################# END BLOCKS ###############################################
 
 
@@ -159,6 +173,7 @@ echo '[]'
 do
 	echo -n ",["
 	layout
+	pkg
 	volume_pamixer
 	private_ip
 	battery
