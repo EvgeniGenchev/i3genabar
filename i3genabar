@@ -26,7 +26,7 @@ layout(){
 private_ip(){
 
 	INTERNET_MODULE="wlan0"
-	PRIVATE_IP=$(ip a | grep "192.168" | awk '/inet/ {print $2}' | cut -f1 -d"/")
+	PRIVATE_IP=$(ip a | grep "192.168" | awk '/inet/ {print $2}' | cut -f1 -d"/" | head --lines 1)
 	SIGNAL_STRENGTH=$(cat /proc/net/wireless | grep 'wlan0' | tr -s " " | cut -d " " -f 4 | cut -f1 -d".")
 	
 	echo -n ',{'
@@ -61,19 +61,19 @@ battery(){
 		echo -n "\"name\":\"id_battery\","
 		
 		if [ $SUPPLY_STATUS == "Charging" ]; then
-			echo -n "\"full_text\":\" $CAPACITY%\","
+			echo -n "\"full_text\":\"󰂋 $CAPACITY%\","
 			echo -n "\"color\": \"$COLOR_OK\""
 		
 		elif [ $CAPACITY -eq 100 ]; then
-			echo -n "\"full_text\":\" $CAPACITY%\","
+			echo -n "\"full_text\":\"󰁹 $CAPACITY%\","
 			echo -n "\"color\": \"$COLOR_BAD\""
 		
 		elif [ $CAPACITY -lt 21 ]; then
-			echo -n "\"full_text\":\" $CAPACITY%\","
+			echo -n "\"full_text\":\"󰁺 $CAPACITY%\","
 			echo -n "\"color\": \"$COLOR_BAD\""
 		
 		else
-			echo -n "\"full_text\":\" $CAPACITY%\""
+			echo -n "\"full_text\":\"󰁾 $CAPACITY%\""
 		fi
 
 		echo -n "}"
@@ -89,7 +89,7 @@ disk_usage(){
 
 	echo -n ',{'
 	echo -n "\"name\":\"id_disk\","
-	echo -n "\"full_text\":\" $USED/$TOTAL\""
+	echo -n "\"full_text\":\"󰋊 $USED/$TOTAL\""
 	echo -n "}"
 }
 
@@ -115,7 +115,7 @@ dtime() {
 	DATE=$(date "+%Y-%m-%d %H:%M")
 	echo -n ',{'
 	echo -n "\"name\":\"id_dtime\","
-	echo -n "\"full_text\":\" $DATE \""
+	echo -n "\"full_text\":\"  $DATE \""
 	echo -n "}"
 }
 
